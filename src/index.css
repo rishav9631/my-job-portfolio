@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-gradient-to-br from-[#111827] via-[#111827] to-[#064e3b] min-h-screen text-white selection:bg-[#10b981]/30 font-inter;
+        background-attachment: fixed;
+        /* Ensures gradient covers full scrollable area */
+    }
+}

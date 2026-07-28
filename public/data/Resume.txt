@@ -1,0 +1,229 @@
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+	{#1 \vspace{-3pt}}
+% 	........change font...........
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+	\begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+  	\textbf{#1} & #2 \\
+  	\textit{\small#3} & \textit{\small #4} \\
+	\end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+	\item
+	\begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+  	\textit{\small#1} & \textit{\small #2} \\
+	\end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+	\item
+	\begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+  	\small#1 & #2 \\
+	\end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+\begin{center}
+	\textbf{\Huge \scshape  Rishav Kumar} \\ \vspace{1pt}
+	\small 6203157646 $|$ \href{mailto:rishavjha771@gmail.com}{\underline{rishavjha771@gmail.com}} $|$
+	\href{https://www.linkedin.com/in/rishav-kumar-sde/}{\underline{linkedin.com/rishav-kumar}} $|$
+	\href{https://github.com/rishav9631}{\underline{github.com/rishav9631}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+	\resumeSubheading
+  	{National Institute of Technology, Jamshedpur}{Jharkhand, India}
+  	{B.Tech in Electronics and Communications Engineering $|$ {CGPA : 8.54}}{July 2021 -- July 2025}
+  \resumeSubHeadingListEnd
+  \resumeSubHeadingListStart
+	\resumeSubheading
+  	{Mohini Devi Memorial School, Araria, Bihar}{Bihar, India}
+  	{Class-12th CBSE $|$ Percentage : 91}{April 2018 -- April 2020}
+  \resumeSubHeadingListEnd
+  \resumeSubHeadingListStart
+	\resumeSubheading
+  	{Jawahar Navodaya Vidyalaya}{Bihar, India}
+  	{Class-10th $|$ Percentage : 91.4}{April 2018}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+\begin{itemize}[leftmargin=0.17in, label={}]
+    \resumeSubheading
+        {Software Developer}{June 2025 -- Present}
+        {Amdocs}{Pune, India}
+        \resumeItemListStart
+            \resumeItem{Develop and maintain sustainable, high-quality code for a large-scale invoicing and billing platform.}
+            \resumeItem{Apply SRE principles and use Grafana monitoring to proactively resolve issues and enhance system reliability.}
+            \resumeItem{Support client projects in migrating core infrastructure from on-premises to AWS.}
+        \resumeItemListEnd
+\end{itemize}
+
+
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+
+\resumeProjectHeading
+    {\textbf{Expense Tracker} $|$
+    \href{https://github.com/rishav9631/ExpenseTracker-Hosting}{Source Code }\emph{}}{Oct 2025}  
+    \resumeItemListStart
+        \resumeItem{Built a MERN-stack application with AI-powered expense parsing and workflow automation using \textbf{n8n}.}
+        \resumeItem{Automates expense entry from emails, categorization using \textbf{Gen AI}, and generates automated PDF reports.} 
+        \resumeItem{Backend Hosted on Render and Frontend Hosted on Vercel.}
+    \resumeItemListEnd
+
+\resumeProjectHeading
+    {\textbf{StudyNotion} $|$
+    
+     \href{https://github.com/rishav9631/StudyNotion}{Source Code }\emph{}}{June 2024}  
+    \resumeItemListStart
+        \resumeItem{Tech Stack Used: \textbf{MERN Stack (MongoDB, Express.js, React.js, Node.js)}}
+        \resumeItem{Developed a full-stack ed-tech platform with secure JWT authentication for content creation, consumption, and rating.} 
+        \resumeItem{Designed an intuitive UI with payment integration and optimized media delivery with Cloudinary, reducing load times by 20\%.}
+    \resumeItemListEnd
+
+\resumeProjectHeading
+    {\textbf{Point of Sale (POS) } $|$
+    \href{https://github.com/rishav9631/Pos_Application}{Source Code }\emph{}}{March 2024}  
+    \resumeItemListStart
+        \resumeItem{Tech Stack Used: \textbf{MERN Stack (MongoDB, Express.js, React.js, Node.js)}}
+        \resumeItem{Built a full-stack POS system with user authentication, order processing, bill generation, and customer management features.}
+        \resumeItem{Developed a robust backend (Node.js/Express) and a responsive frontend using React.js, React Router, and Redux.}
+    \resumeItemListEnd
+
+\resumeSubHeadingListEnd           
+\section{Skills}
+\begin{itemize}[leftmargin=0.17in, label={}]
+    \resumeItemListStart
+        \resumeItem{\textbf{Languages}: C, C++, Java, JavaScript, \textbf{Python}}
+        \resumeItem{\textbf{CS Fundamentals}: Data Structures and Algorithms (DSA), OOP, Computer Networks (CN), Operating Systems (OS), Database Management Systems (DBMS)}
+        \resumeItem{\textbf{Frontend}: HTML, CSS, JavaScript, ReactJS, TailwindCSS}
+        \resumeItem{\textbf{Backend}: NodeJS, ExpressJS, MongoDB, Mongoose, \textbf{RAG}}
+        \resumeItem{\textbf{Tools \& Platforms}: Git, GitHub, Postman, \textbf{Grafana}, \textbf{n8n}}
+    \resumeItemListEnd
+\end{itemize}
+
+\section{Profiles}
+\begin{itemize}[leftmargin=0.17in, label={}]
+    \resumeItemListStart
+    \resumeItem{
+        \href{https://leetcode.com/rishavjha771/}{\underline{Leetcode}} $|$
+        \href{https://www.codingninjas.com/studio/profile/b880f267-56e1-4dd4-980c-4ab9446d5305}{\underline{Codingninjas}} $|$
+        \href{https://auth.geeksforgeeks.org/user/rishavjha771}{\underline{GFG}} $|$
+        \href{https://codeforces.com/profile/Rishav_771}{\underline{Codeforces}} $|$
+        \href{https://www.codechef.com/users/rishavjha771}{\underline{Codechef}} $|$
+        \href{https://www.hackerearth.com/@rishavjha771}{\underline{HackerRank}}
+    }
+    \resumeItemListEnd
+\end{itemize}
+
+ %-----------PROGRAMMING SKILLS-----------
+\section{Achievements}
+ \begin{itemize}[leftmargin=0.17in, label={}]
+        	\resumeItemListStart
+        	
+            
+            \resumeItem{{\textbf{Rank-455} in {\textbf{Codathon}- Inter NIT Coding Competition 2022 out of 4000+ participants }\href{https://www.codingninjas.com/studio/contests/codathon-2023-by-nit-bhopal-day-4}{\underline{View Result}}}}
+            
+            
+
+             \resumeItem{ 5 star in  \textbf{C++ HACKERRANK}  .}
+        
+        \resumeItem{Solved \textbf{1250+ questions} on various Coding Platforms.}
+        
+        
+        	
+        	\resumeItemListEnd
+ \end{itemize}
+ 
+
+%
+
+
+ 
+
+
+
+ 
+
+
+ 
+%-------------------------------------------
+\end{document}
