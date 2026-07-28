@@ -9,24 +9,29 @@ const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  // Silent background keep-alive ping to keep Render backend warm (every 14s)
-  const keepBackendWarm = useCallback(async () => {
+  const checkBackendHealth = useCallback(async () => {
     try {
-      await axios.get(`${BASE_URL}/api/v1/health`, { timeout: 8000 });
+      const res = await axios.get(`${BASE_URL}/api/v1/health`, { timeout: 8000 });
+      if (res.data?.success || res.data?.status === 'online') {
+        setBackendStatus('online');
+      } else {
+        setBackendStatus('offline');
+      }
     } catch {
-      // Ignore background errors silently
+      setBackendStatus('offline');
     }
   }, []);
 
   useEffect(() => {
-    keepBackendWarm();
-    const interval = setInterval(keepBackendWarm, 14000); // Silent ping every 14 seconds
+    checkBackendHealth();
+    const interval = setInterval(checkBackendHealth, 14000); // Check & keep warm every 14 seconds
     return () => clearInterval(interval);
-  }, [keepBackendWarm]);
+  }, [checkBackendHealth]);
 
   const navLinks = [
     { name: 'Mass Mailer', path: '/mass-mailer' },
@@ -53,8 +58,40 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           
-          {/* Logo / Brand Name */}
-          <div className="flex-shrink-0 flex items-center">
+          {/* Extreme Left Status Circle + Logo / Brand Name */}
+          <div className="flex-shrink-0 flex items-center gap-3">
+            <button
+              onClick={checkBackendHealth}
+              title={
+                backendStatus === 'online'
+                  ? 'Backend Live & Warm (Render Connected). Click to re-check.'
+                  : backendStatus === 'offline'
+                  ? 'Backend Offline / Waking Up (Render Free Tier). Click to re-check.'
+                  : 'Checking backend connection...'
+              }
+              className="relative flex items-center justify-center p-1 rounded-full hover:bg-white/5 transition-all outline-none"
+            >
+              {backendStatus === 'online' && (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
+                </span>
+              )}
+
+              {backendStatus === 'offline' && (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                </span>
+              )}
+
+              {backendStatus === 'checking' && (
+                <span className="relative flex h-3 w-3">
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400 animate-pulse"></span>
+                </span>
+              )}
+            </button>
+
             <Link to="/" className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#10b981] to-teal-400">
               JobTracker
             </Link>
