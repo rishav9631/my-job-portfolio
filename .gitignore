@@ -27,3 +27,7 @@ yarn-error.log*
 
 # test files
 test.pdf
+
+# local deployment guides
+deployment_guide*.html
+
