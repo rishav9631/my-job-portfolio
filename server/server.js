@@ -13,24 +13,16 @@ dotenv.config();
 
 // Create an Express application
 const app = express();
-// Enable CORS — allow the deployed frontend and localhost for dev
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  process.env.CLIENT_URL,       // e.g. https://your-app.vercel.app
-].filter(Boolean);
-
+// Enable CORS — dynamically allow any Vercel frontend, localhost, and custom domains
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(null, true); // Allow all for now; tighten later if needed
-  },
+  origin: true, // Reflects the requesting origin (Vercel, localhost, etc.)
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
+
+// Handle preflight OPTIONS requests for all routes
+app.options('*', cors());
 const PORT = process.env.PORT || 3000;
 
 // Connect to Database
