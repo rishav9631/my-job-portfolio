@@ -46,6 +46,11 @@ const resumeRoutes = require('./routes/resumeRoutes');
 const authRoutes = require('./routes/authRoutes');
 const configRoutes = require('./routes/configRoutes');
 
+// Health check endpoint for frontend status indicator
+app.get('/api/v1/health', (req, res) => {
+  res.json({ success: true, status: 'online', timestamp: Date.now() });
+});
+
 // Use API Routes
 app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/resume', resumeRoutes);

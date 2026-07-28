@@ -1,14 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HiOutlineMenu, HiX } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import axios from 'axios';
+
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+
+  const checkBackendHealth = useCallback(async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/api/v1/health`, { timeout: 8000 });
+      if (res.data?.success || res.data?.status === 'online') {
+        setBackendStatus('online');
+      } else {
+        setBackendStatus('offline');
+      }
+    } catch {
+      setBackendStatus('offline');
+    }
+  }, []);
+
+  useEffect(() => {
+    checkBackendHealth();
+    const interval = setInterval(checkBackendHealth, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [checkBackendHealth]);
 
   const navLinks = [
     { name: 'Mass Mailer', path: '/mass-mailer' },
@@ -59,6 +82,47 @@ const Navbar = () => {
 
           {/* User Actions & Mobile Hamburger Menu (Right) */}
           <div className="flex items-center space-x-4">
+            
+            {/* Live Backend Status Badge */}
+            <button
+              onClick={checkBackendHealth}
+              title={
+                backendStatus === 'online'
+                  ? 'Render Backend is Live & Connected'
+                  : backendStatus === 'offline'
+                  ? 'Render Backend is Offline / Waking Up (Free tier sleeps after inactivity). Click to re-check.'
+                  : 'Checking connection...'
+              }
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#1f2937]/70 border border-[#374151]/50 cursor-pointer hover:bg-[#1f2937] transition-all"
+            >
+              {backendStatus === 'online' && (
+                <>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-emerald-400 hidden lg:inline">Backend Live</span>
+                </>
+              )}
+
+              {backendStatus === 'offline' && (
+                <>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                  </span>
+                  <span className="text-rose-400 hidden lg:inline">Backend Sleeping</span>
+                </>
+              )}
+
+              {backendStatus === 'checking' && (
+                <>
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span className="text-amber-400 hidden lg:inline">Checking...</span>
+                </>
+              )}
+            </button>
+
             {/* Desktop User Info + Logout */}
             <div className="hidden md:flex items-center space-x-4">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1f2937]/50 border border-[#374151]/50">
