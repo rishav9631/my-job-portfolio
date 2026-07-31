@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
+import { aiEndpoint, resumeEndpoint } from '../services/apis';
 
 const ATSScanner = () => {
   const [jobDescription, setJobDescription] = useState('');
@@ -18,7 +19,7 @@ const ATSScanner = () => {
     }
     const toastId = toast.loading('Saving to My Resumes...');
     try {
-      const res = await axios.post('http://localhost:4000/api/v1/resume/tailored', {
+      const res = await axios.post(resumeEndpoint.TAILORED_RESUME, {
         company,
         jobId,
         content: scanResult
@@ -72,7 +73,7 @@ const ATSScanner = () => {
       
       Make the response professional, easy to read, and return it in Markdown format. Return ONLY the evaluation.`;
 
-      const res = await axios.post('http://localhost:4000/api/v1/ai', { prompt });
+      const res = await axios.post(aiEndpoint.GENERATE_AI, { prompt });
       
       if (res.data.success) {
         setScanResult(res.data.response);

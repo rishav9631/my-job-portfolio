@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
+import { aiEndpoint, resumeEndpoint } from '../services/apis';
 
 const CompareResume = () => {
   const [jobDescription, setJobDescription] = useState('');
@@ -19,7 +20,7 @@ const CompareResume = () => {
     }
     const toastId = toast.loading('Saving to My Resumes...');
     try {
-      const res = await axios.post('http://localhost:4000/api/v1/resume/tailored', {
+      const res = await axios.post(resumeEndpoint.TAILORED_RESUME, {
         company,
         jobId,
         content: comparisonResult
@@ -79,7 +80,7 @@ const CompareResume = () => {
       
       Return the response in clear Markdown format. Return ONLY the evaluation report.`;
 
-      const res = await axios.post('http://localhost:4000/api/v1/ai', { prompt });
+      const res = await axios.post(aiEndpoint.GENERATE_AI, { prompt });
       
       if (res.data.success) {
         setComparisonResult(res.data.response);

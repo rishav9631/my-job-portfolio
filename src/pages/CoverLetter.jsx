@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import toast from 'react-hot-toast';
+import { aiEndpoint, resumeEndpoint } from '../services/apis';
 
 const CoverLetter = () => {
   const [jobDescription, setJobDescription] = useState('');
@@ -18,7 +19,7 @@ const CoverLetter = () => {
     }
     const toastId = toast.loading('Saving to My Resumes...');
     try {
-      const res = await axios.post('http://localhost:4000/api/v1/resume/tailored', {
+      const res = await axios.post(resumeEndpoint.TAILORED_RESUME, {
         company,
         jobId,
         content: coverLetter
@@ -66,7 +67,7 @@ const CoverLetter = () => {
       
       Keep the tone professional and enthusiastic. Ensure my skills map directly to the job requirements. Return ONLY the cover letter content (no greetings or markdown formatting fences at the start).`;
 
-      const res = await axios.post('http://localhost:4000/api/v1/ai', { prompt });
+      const res = await axios.post(aiEndpoint.GENERATE_AI, { prompt });
       
       if (res.data.success) {
         setCoverLetter(res.data.response);

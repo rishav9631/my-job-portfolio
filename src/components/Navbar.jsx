@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
-const BASE_URL = process.env.REACT_APP_BASE_URL || 'http://localhost:4000';
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://jobtracker-backend-9dlp.onrender.com';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

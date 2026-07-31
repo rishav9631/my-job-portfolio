@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { resumeEndpoint } from '../services/apis';
 
 const MyResume = () => {
   const [masterResume, setMasterResume] = useState('');
@@ -26,13 +27,13 @@ const MyResume = () => {
     setLoading(true);
     try {
       // Fetch Master Resume
-      const masterRes = await axios.get('http://localhost:4000/api/v1/resume/master');
+      const masterRes = await axios.get(resumeEndpoint.MASTER_RESUME);
       if (masterRes.data.success) {
         setMasterResume(masterRes.data.content);
       }
 
       // Fetch Tailored Resumes
-      const tailoredRes = await axios.get('http://localhost:4000/api/v1/resume/tailored');
+      const tailoredRes = await axios.get(resumeEndpoint.TAILORED_RESUME);
       if (tailoredRes.data.success) {
         setTailoredResumes(tailoredRes.data.resumes);
       }
@@ -47,7 +48,7 @@ const MyResume = () => {
   const saveMasterResume = async () => {
     const toastId = toast.loading('Saving Master Resume...');
     try {
-      const res = await axios.put('http://localhost:4000/api/v1/resume/master', {
+      const res = await axios.put(resumeEndpoint.MASTER_RESUME, {
         content: masterResume
       });
       if (res.data.success) {
@@ -74,7 +75,7 @@ const MyResume = () => {
     const toastId = toast.loading('Compiling LaTeX to PDF via Cloud...');
 
     try {
-      const response = await fetch('http://localhost:4000/api/v1/resume/compile', {
+      const response = await fetch(resumeEndpoint.COMPILE_RESUME, {
          method: 'POST',
          headers: {
             'Content-Type': 'application/json'
@@ -129,7 +130,7 @@ const MyResume = () => {
     const toastId = toast.loading('Saving resume...');
 
     try {
-      const res = await axios.post('http://localhost:4000/api/v1/resume/tailored', {
+      const res = await axios.post(resumeEndpoint.TAILORED_RESUME, {
         company: newCompany,
         jobId: newJobId || 'N/A',
         content: newContent
@@ -158,7 +159,7 @@ const MyResume = () => {
 
     const toastId = toast.loading('Deleting resume...');
     try {
-      const res = await axios.delete(`http://localhost:4000/api/v1/resume/tailored/${id}`);
+      const res = await axios.delete(`${resumeEndpoint.TAILORED_RESUME}/${id}`);
       if (res.data.success) {
         toast.success('Resume deleted.', { id: toastId });
         setTailoredResumes(prev => prev.filter(r => r._id !== id));
