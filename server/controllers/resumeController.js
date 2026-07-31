@@ -119,9 +119,17 @@ exports.compileResume = async (req, res) => {
             // It might be an error page from texlive.net
             const text = Buffer.from(response.data).toString('utf-8');
             console.error("LaTeX compilation returned non-PDF:", text.substring(0, 500));
+
+            // Extract TeX log error lines if present
+            let errorSnippet = text.substring(0, 500);
+            const match = text.match(/!(?:[^\n]+\n)+/);
+            if (match) {
+                errorSnippet = match[0].trim();
+            }
+
             res.status(422).json({ 
                 success: false, 
-                message: "LaTeX compilation error. Check your LaTeX syntax.",
+                message: `LaTeX compilation error: ${errorSnippet.substring(0, 200)}`,
                 details: text.substring(0, 1000)
             });
         }
