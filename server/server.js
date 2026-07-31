@@ -49,62 +49,76 @@ app.use('/api/v1/resume', resumeRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/config', configRoutes);
 
-// Configure nodemailer transporter using environment variables
-const transporter = nodemailer.createTransport({
-  host: process.env.MAIL_HOST, // SMTP server
-  port: 587, // Port for TLS
-  secure: false, // Use STARTTLS
-  auth: {
-    user: process.env.MAIL_USER, // Your email
-    pass: process.env.MAIL_PASS, // Your app password
-  },
-});
-
 // API Endpoint to handle sending email
 app.post('/send-email', async (req, res) => {
-  console.log('Request received at /send-email');
-  console.log('Request body:', req.body);
+  const requestId = Date.now().toString(36);
+  console.log(`[${requestId}] ========== /send-email START ==========`);
+  console.log(`[${requestId}] Request body:`, JSON.stringify(req.body));
 
   try {
     const { recipientName, recipientEmail, recipientCompany, jobRole, jobLink } = req.body;
 
     // Validate required fields
     if (!recipientName || !recipientEmail || !recipientCompany) {
+      console.log(`[${requestId}] Validation failed — missing required fields`);
       return res.status(400).json({ message: 'All fields are required.' });
     }
+    console.log(`[${requestId}] Step 1/4: Validation passed`);
 
     // Fetch dynamic config from MongoDB
+    console.log(`[${requestId}] Step 2/4: Fetching config from MongoDB...`);
+    const configStart = Date.now();
     const config = await getConfigInternal();
+    console.log(`[${requestId}] Step 2/4: Config fetched in ${Date.now() - configStart}ms`);
 
-    // Generate email content — always call the template so emailContent is never undefined
+    // Log SMTP config (masked for security)
+    const maskValue = (v) => v ? v.substring(0, 3) + '***' + v.substring(v.length - 2) : '<EMPTY>';
+    console.log(`[${requestId}] SMTP Config — Host: ${config.smtpHost || '<EMPTY>'}, Port: ${config.smtpPort || '<EMPTY>'}, Secure: ${config.smtpSecure}, User: ${maskValue(config.smtpUser)}, Pass length: ${config.smtpPass ? config.smtpPass.length : 0} chars`);
+
+    // Generate email content
+    console.log(`[${requestId}] Step 3/4: Generating email template...`);
     const emailContent = getInternshipInquiry(recipientName, recipientCompany, jobRole || '', jobLink || '', config);
+    console.log(`[${requestId}] Step 3/4: Template generated (${emailContent ? emailContent.length : 0} chars)`);
 
     // Send email to the recipient (pass config for dynamic SMTP)
+    console.log(`[${requestId}] Step 4/4: Calling mailSender to ${recipientEmail}...`);
+    const mailStart = Date.now();
     const emailRes = await mailSender(
-      recipientEmail, // Recipient email address
+      recipientEmail,
       jobRole
         ? `Inquiry About ${jobRole} Opportunity`
         : "Inquiry About Internship Opportunities",
       emailContent,
-      config // Dynamic SMTP config
+      config
     );
+    console.log(`[${requestId}] Step 4/4: Email sent in ${Date.now() - mailStart}ms — messageId: ${emailRes?.messageId}`);
 
-    console.log("User Email Response:", emailRes);
-
+    console.log(`[${requestId}] ========== /send-email SUCCESS ==========`);
     return res.json({
       success: true,
       message: "Email sent successfully!",
     });
   } catch (error) {
-    console.error("Error sending email:", error.message);
+    console.error(`[${requestId}] ========== /send-email FAILED ==========`);
+    console.error(`[${requestId}] Error name: ${error.name}`);
+    console.error(`[${requestId}] Error message: ${error.message}`);
+    console.error(`[${requestId}] Error code: ${error.code || 'N/A'}`);
+    console.error(`[${requestId}] Error command: ${error.command || 'N/A'}`);
+    console.error(`[${requestId}] Error responseCode: ${error.responseCode || 'N/A'}`);
+    console.error(`[${requestId}] Full stack:`, error.stack);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong while sending the email",
+      message: `Failed to send email: ${error.message}`,
     });
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Export app for Vercel Serverless environment
+module.exports = app;
+
+// Start the server (if run directly)
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}

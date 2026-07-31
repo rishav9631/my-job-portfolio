@@ -23,6 +23,8 @@ const getConfigInternal = async () => {
             geminiApiKey: process.env.GEMINI_API_KEY || '',
             geminiApiUrl: process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
             smtpHost: process.env.MAIL_HOST || 'smtp.gmail.com',
+            smtpPort: process.env.MAIL_PORT ? parseInt(process.env.MAIL_PORT, 10) : 465,
+            smtpSecure: process.env.MAIL_SECURE !== undefined ? process.env.MAIL_SECURE === 'true' : true,
             smtpUser: process.env.MAIL_USER || '',
             smtpPass: process.env.MAIL_PASS || '',
         });

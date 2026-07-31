@@ -42,6 +42,14 @@ const appConfigSchema = new mongoose.Schema({
         type: String,
         default: 'smtp.gmail.com'
     },
+    smtpPort: {
+        type: Number,
+        default: 465
+    },
+    smtpSecure: {
+        type: Boolean,
+        default: true
+    },
     smtpUser: {
         type: String,
         default: ''
