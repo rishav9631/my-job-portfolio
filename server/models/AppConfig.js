@@ -37,7 +37,13 @@ const appConfigSchema = new mongoose.Schema({
         default: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
     },
 
-    // SMTP configuration
+    // Resend API configuration (replaces SMTP — works on Render free tier)
+    resendApiKey: {
+        type: String,
+        default: ''
+    },
+
+    // Legacy SMTP configuration (kept for backward compatibility)
     smtpHost: {
         type: String,
         default: 'smtp.gmail.com'

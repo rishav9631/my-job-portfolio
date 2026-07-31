@@ -1,126 +1,99 @@
-const nodemailer = require("nodemailer");
+const axios = require('axios');
 
-const createTransporter = (host, port, secure, user, pass) => {
-    return nodemailer.createTransport({
-        host: host,
-        port: port,
-        secure: secure,
-        auth: {
-            user: user,
-            pass: pass,
-        },
-        connectionTimeout: 10000, // 10s connection timeout
-        greetingTimeout: 10000,   // 10s greeting timeout
-        socketTimeout: 15000,     // 15s socket timeout
-        tls: {
-            rejectUnauthorized: false
-        }
-    });
-};
-
+/**
+ * Send email via Resend HTTP API (works on Render free tier — uses HTTPS port 443).
+ * Falls back gracefully with detailed error logging.
+ *
+ * @param {string} email - Recipient email address
+ * @param {string} title - Email subject line
+ * @param {string} body  - HTML email body
+ * @param {object} config - Dynamic config from MongoDB (contains resendApiKey, senderEmail, senderName)
+ */
 const mailSender = async (email, title, body, config = null) => {
-    // Resolve credentials and primary settings
-    const smtpHost = (config && config.smtpHost) || process.env.MAIL_HOST || 'smtp.gmail.com';
-    const smtpUser = (config && config.smtpUser) || process.env.MAIL_USER;
-    const smtpPass = (config && config.smtpPass) || process.env.MAIL_PASS;
+    const resendApiKey = (config && config.resendApiKey) || process.env.RESEND_API_KEY;
+    const senderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+    const senderName = (config && config.senderName) || process.env.SENDER_NAME || 'Rishav Kumar';
 
     console.log(`[MailSender] ---- DEBUG START ----`);
-    console.log(`[MailSender] smtpHost: ${smtpHost}`);
-    console.log(`[MailSender] smtpUser: ${smtpUser ? smtpUser.substring(0, 4) + '***' : '<NOT SET>'}`);
-    console.log(`[MailSender] smtpPass: ${smtpPass ? `SET (${smtpPass.length} chars, starts with "${smtpPass.substring(0, 4)}")` : '<NOT SET>'}`);
-    console.log(`[MailSender] to: ${email}, subject: ${title}`);
-    console.log(`[MailSender] body length: ${body ? body.length : 0} chars`);
+    console.log(`[MailSender] Provider: Resend API (HTTPS)`);
+    console.log(`[MailSender] API Key: ${resendApiKey ? `SET (${resendApiKey.length} chars, starts with "${resendApiKey.substring(0, 6)}")` : '<NOT SET>'}`);
+    console.log(`[MailSender] From: ${senderName} <${senderEmail}>`);
+    console.log(`[MailSender] To: ${email}`);
+    console.log(`[MailSender] Subject: ${title}`);
+    console.log(`[MailSender] Body length: ${body ? body.length : 0} chars`);
 
-    // Determine initial port and secure settings (default to 465 SSL, as 587 STARTTLS is frequently blocked)
-    let primaryPort = (config && config.smtpPort) ? Number(config.smtpPort) : (process.env.MAIL_PORT ? Number(process.env.MAIL_PORT) : 465);
-    let primarySecure = (config && config.smtpSecure !== undefined) ? Boolean(config.smtpSecure) : (process.env.MAIL_SECURE !== undefined ? process.env.MAIL_SECURE === 'true' : primaryPort === 465);
+    if (!resendApiKey) {
+        const errMsg = 'Resend API key is not configured. Set RESEND_API_KEY env var or update it in Admin Dashboard.';
+        console.error(`[MailSender] ERROR: ${errMsg}`);
+        console.error(`[MailSender] ---- DEBUG END (no API key) ----`);
+        throw new Error(errMsg);
+    }
 
-    // Prepare fallback options (if primary is 465 SSL, fallback is 587 TLS; if 587, fallback is 465)
-    let fallbackPort = primaryPort === 465 ? 587 : 465;
-    let fallbackSecure = fallbackPort === 465;
-
-    // Attempt 1: Primary transport
     try {
-        console.log(`[MailSender] ATTEMPT 1: Connecting to ${smtpHost}:${primaryPort} (secure: ${primarySecure})...`);
-        const transporter = createTransporter(smtpHost, primaryPort, primarySecure, smtpUser, smtpPass);
-
-        // Verify SMTP connection & auth BEFORE sending
-        console.log(`[MailSender] ATTEMPT 1: Verifying SMTP connection & credentials...`);
-        const verifyStart = Date.now();
-        try {
-            await transporter.verify();
-            console.log(`[MailSender] ATTEMPT 1: SMTP verified OK in ${Date.now() - verifyStart}ms`);
-        } catch (verifyErr) {
-            console.error(`[MailSender] ATTEMPT 1: SMTP verify FAILED in ${Date.now() - verifyStart}ms`);
-            console.error(`[MailSender] ATTEMPT 1: Verify error — code: ${verifyErr.code || 'N/A'}, command: ${verifyErr.command || 'N/A'}, responseCode: ${verifyErr.responseCode || 'N/A'}`);
-            console.error(`[MailSender] ATTEMPT 1: Verify error message: ${verifyErr.message}`);
-            throw verifyErr; // Go to fallback
-        }
-
-        console.log(`[MailSender] ATTEMPT 1: Sending email...`);
+        console.log(`[MailSender] Sending via Resend API...`);
         const sendStart = Date.now();
-        let info = await transporter.sendMail({
-            from: smtpUser,
-            to: email,
-            subject: title,
-            html: body,
-        });
 
-        console.log(`[MailSender] ATTEMPT 1: Email sent in ${Date.now() - sendStart}ms — messageId: ${info.messageId}`);
-        console.log(`[MailSender] ATTEMPT 1: Response: ${info.response}`);
-        console.log(`[MailSender] ---- DEBUG END (success) ----`);
-        return info;
-    } catch (primaryError) {
-        console.warn(`[MailSender] ATTEMPT 1 FAILED on ${smtpHost}:${primaryPort}`);
-        console.warn(`[MailSender]   Error name: ${primaryError.name}`);
-        console.warn(`[MailSender]   Error message: ${primaryError.message}`);
-        console.warn(`[MailSender]   Error code: ${primaryError.code || 'N/A'}`);
-        console.warn(`[MailSender]   Error command: ${primaryError.command || 'N/A'}`);
-        console.warn(`[MailSender]   Error responseCode: ${primaryError.responseCode || 'N/A'}`);
-
-        // Attempt 2: Fallback transport
-        try {
-            console.log(`[MailSender] ATTEMPT 2: Connecting to ${smtpHost}:${fallbackPort} (secure: ${fallbackSecure})...`);
-            const fallbackTransporter = createTransporter(smtpHost, fallbackPort, fallbackSecure, smtpUser, smtpPass);
-
-            // Verify SMTP connection & auth BEFORE sending
-            console.log(`[MailSender] ATTEMPT 2: Verifying SMTP connection & credentials...`);
-            const verifyStart2 = Date.now();
-            try {
-                await fallbackTransporter.verify();
-                console.log(`[MailSender] ATTEMPT 2: SMTP verified OK in ${Date.now() - verifyStart2}ms`);
-            } catch (verifyErr2) {
-                console.error(`[MailSender] ATTEMPT 2: SMTP verify FAILED in ${Date.now() - verifyStart2}ms`);
-                console.error(`[MailSender] ATTEMPT 2: Verify error — code: ${verifyErr2.code || 'N/A'}, command: ${verifyErr2.command || 'N/A'}, responseCode: ${verifyErr2.responseCode || 'N/A'}`);
-                console.error(`[MailSender] ATTEMPT 2: Verify error message: ${verifyErr2.message}`);
-                throw verifyErr2;
-            }
-
-            console.log(`[MailSender] ATTEMPT 2: Sending email...`);
-            const sendStart2 = Date.now();
-            let info = await fallbackTransporter.sendMail({
-                from: smtpUser,
-                to: email,
+        const response = await axios.post(
+            'https://api.resend.com/emails',
+            {
+                from: `${senderName} <${senderEmail}>`,
+                to: [email],
                 subject: title,
                 html: body,
-            });
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${resendApiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30000, // 30s timeout
+            }
+        );
 
-            console.log(`[MailSender] ATTEMPT 2: Email sent in ${Date.now() - sendStart2}ms — messageId: ${info.messageId}`);
-            console.log(`[MailSender] ATTEMPT 2: Response: ${info.response}`);
-            console.log(`[MailSender] ---- DEBUG END (fallback success) ----`);
-            return info;
-        } catch (fallbackError) {
-            console.error(`[MailSender] ATTEMPT 2 FAILED on ${smtpHost}:${fallbackPort}`);
-            console.error(`[MailSender]   Error name: ${fallbackError.name}`);
-            console.error(`[MailSender]   Error message: ${fallbackError.message}`);
-            console.error(`[MailSender]   Error code: ${fallbackError.code || 'N/A'}`);
-            console.error(`[MailSender]   Error command: ${fallbackError.command || 'N/A'}`);
-            console.error(`[MailSender]   Error responseCode: ${fallbackError.responseCode || 'N/A'}`);
-            console.error(`[MailSender] ---- DEBUG END (both failed) ----`);
-            throw fallbackError;
+        const elapsed = Date.now() - sendStart;
+        console.log(`[MailSender] Email sent in ${elapsed}ms`);
+        console.log(`[MailSender] Resend response:`, JSON.stringify(response.data));
+        console.log(`[MailSender] ---- DEBUG END (success) ----`);
+
+        return {
+            messageId: response.data?.id || 'unknown',
+            response: JSON.stringify(response.data),
+        };
+    } catch (error) {
+        console.error(`[MailSender] FAILED to send email via Resend API`);
+
+        if (error.response) {
+            // Resend API returned an error response
+            console.error(`[MailSender]   HTTP Status: ${error.response.status}`);
+            console.error(`[MailSender]   Response body: ${JSON.stringify(error.response.data)}`);
+
+            const resendError = error.response.data;
+            const statusCode = error.response.status;
+
+            if (statusCode === 401) {
+                console.error(`[MailSender]   DIAGNOSIS: Invalid API key. Check your Resend API key.`);
+            } else if (statusCode === 403) {
+                console.error(`[MailSender]   DIAGNOSIS: Forbidden. Your sending domain may not be verified in Resend.`);
+            } else if (statusCode === 422) {
+                console.error(`[MailSender]   DIAGNOSIS: Validation error. Check from/to email addresses and domain verification.`);
+            } else if (statusCode === 429) {
+                console.error(`[MailSender]   DIAGNOSIS: Rate limited. You've exceeded your Resend plan's sending limit.`);
+            }
+
+            const errMsg = resendError?.message || resendError?.error || `Resend API error (HTTP ${statusCode})`;
+            console.error(`[MailSender] ---- DEBUG END (API error) ----`);
+            throw new Error(errMsg);
+        } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+            console.error(`[MailSender]   DIAGNOSIS: Request timed out. Network issue or Resend API is down.`);
+            console.error(`[MailSender] ---- DEBUG END (timeout) ----`);
+            throw new Error('Email send request timed out');
+        } else {
+            console.error(`[MailSender]   Error: ${error.message}`);
+            console.error(`[MailSender]   Code: ${error.code || 'N/A'}`);
+            console.error(`[MailSender] ---- DEBUG END (network error) ----`);
+            throw error;
         }
     }
 };
 
 module.exports = mailSender;
-

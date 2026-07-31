@@ -166,9 +166,7 @@ const AdminDashboard = () => {
       senderEmail: 'rishavjha771@gmail.com',
       geminiApiKey: config?.geminiApiKey || '',
       geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
-      smtpHost: 'smtp.gmail.com',
-      smtpUser: config?.smtpUser || '',
-      smtpPass: config?.smtpPass || '',
+      resendApiKey: config?.resendApiKey || '',
     };
     setConfig(defaults);
     setHasChanges(JSON.stringify(defaults) !== JSON.stringify(originalConfig));
@@ -217,7 +215,7 @@ const AdminDashboard = () => {
               <h1 className="text-2xl font-bold text-slate-50">Admin Dashboard</h1>
             </div>
             <p className="text-slate-400 text-sm">
-              Manage email template links, Gemini API settings, and SMTP configuration.
+              Manage email template links, Gemini API settings, and Resend email configuration.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -235,7 +233,7 @@ const AdminDashboard = () => {
           <StatPill icon="fa-solid fa-link" label="Profile Links" value="3" bgClass="bg-indigo-500/15" textClass="text-indigo-400" />
           <StatPill icon="fa-solid fa-envelope" label="Email Fields" value="3" bgClass="bg-emerald-500/15" textClass="text-emerald-400" />
           <StatPill icon="fa-solid fa-robot" label="AI Config" value="2" bgClass="bg-amber-500/15" textClass="text-amber-400" />
-          <StatPill icon="fa-solid fa-server" label="SMTP Fields" value="3" bgClass="bg-rose-500/15" textClass="text-rose-400" />
+          <StatPill icon="fa-solid fa-server" label="Email API" value="1" bgClass="bg-rose-500/15" textClass="text-rose-400" />
         </div>
 
         {/* ─── Settings Sections ─── */}
@@ -294,27 +292,37 @@ const AdminDashboard = () => {
             </div>
           </section>
 
-          {/* ══════ Section 4: SMTP Configuration ══════ */}
+          {/* ══════ Section 4: Resend Email Configuration ══════ */}
           <section className="bg-[rgba(20,27,45,0.75)] border border-white/[0.07] rounded-2xl p-7 backdrop-blur-[10px] shadow-[0_4px_30px_rgba(0,0,0,0.15)]">
             <SectionHeader
-              icon="fa-solid fa-server"
-              title="SMTP Configuration"
-              subtitle="Mail server credentials for sending emails"
+              icon="fa-solid fa-paper-plane"
+              title="Resend Email Configuration"
+              subtitle="API key for sending emails via Resend (HTTPS — works on Render free tier)"
               accentColor="indigo"
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <ConfigField label="SMTP Host" fieldKey="smtpHost" value={config?.smtpHost || ''} onChange={handleChange} placeholder="smtp.gmail.com" />
-              <ConfigField label="SMTP User (Email)" fieldKey="smtpUser" value={config?.smtpUser || ''} onChange={handleChange} type="email" placeholder="your-email@gmail.com" />
+            <div className="grid grid-cols-1 gap-5">
               <ConfigField
-                label="SMTP Password (App Password)"
-                fieldKey="smtpPass"
-                value={config?.smtpPass || ''}
+                label="Resend API Key"
+                fieldKey="resendApiKey"
+                value={config?.resendApiKey || ''}
                 onChange={handleChange}
-                placeholder="App password"
+                placeholder="re_xxxxxxxxx..."
                 isSensitive={true}
-                isRevealed={revealedFields.smtpPass}
-                onToggleReveal={() => toggleReveal('smtpPass')}
+                isRevealed={revealedFields.resendApiKey}
+                onToggleReveal={() => toggleReveal('resendApiKey')}
               />
+              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 text-sm text-slate-300 leading-relaxed">
+                <p className="font-semibold text-indigo-300 mb-2">
+                  <i className="fa-solid fa-circle-info mr-2" />
+                  How to get your Resend API key:
+                </p>
+                <ol className="list-decimal list-inside space-y-1 text-slate-400">
+                  <li>Sign up at <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">resend.com</a></li>
+                  <li>Add & verify your sending domain (or use <code className="bg-white/5 px-1 rounded text-indigo-300">onboarding@resend.dev</code> for testing)</li>
+                  <li>Go to API Keys → Create API Key</li>
+                  <li>Paste the key above and save</li>
+                </ol>
+              </div>
             </div>
           </section>
 
