@@ -94,47 +94,55 @@ exports.compileResume = async (req, res) => {
             return res.status(400).json({ success: false, message: "LaTeX content is required." });
         }
 
-        // texlive.net expects application/x-www-form-urlencoded
-        const params = new URLSearchParams();
-        params.append('filecontents[]', content);
-        params.append('filename[]', 'main.tex');
-        params.append('engine', 'pdflatex');
-        params.append('return', 'pdf');
+        // ── ATTEMPT 1: texlive.net ──────────────────────────────────────────
+        try {
+            const params = new URLSearchParams();
+            params.append('filecontents[]', content);
+            params.append('filename[]', 'main.tex');
+            params.append('engine', 'pdflatex');
+            params.append('return', 'pdf');
 
-        const response = await axios.post('https://texlive.net/cgi-bin/latexcgi', params, {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            responseType: 'arraybuffer',
-            timeout: 30000
-        });
-
-        // Check if the response is actually a PDF
-        const contentType = response.headers['content-type'];
-        if (contentType && contentType.includes('application/pdf')) {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
-            res.send(response.data);
-        } else {
-            // It might be an error page from texlive.net
-            const text = Buffer.from(response.data).toString('utf-8');
-            console.error("LaTeX compilation returned non-PDF:", text.substring(0, 500));
-
-            // Extract TeX log error lines if present
-            let errorSnippet = text.substring(0, 500);
-            const match = text.match(/!(?:[^\n]+\n)+/);
-            if (match) {
-                errorSnippet = match[0].trim();
-            }
-
-            res.status(422).json({ 
-                success: false, 
-                message: `LaTeX compilation error: ${errorSnippet.substring(0, 200)}`,
-                details: text.substring(0, 1000)
+            const response = await axios.post('https://texlive.net/cgi-bin/latexcgi', params.toString(), {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                responseType: 'arraybuffer',
+                timeout: 30000
             });
+
+            const contentType = response.headers['content-type'];
+            if (contentType && contentType.includes('application/pdf')) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
+                return res.send(response.data);
+            }
+        } catch (err1) {
+            console.warn("texlive.net compilation attempt failed, trying latexonline fallback...", err1.message);
         }
+
+        // ── ATTEMPT 2: latexonline.cc fallback ──────────────────────────────
+        try {
+            const response2 = await axios.get(`https://latexonline.cc/compile?text=${encodeURIComponent(content)}`, {
+                responseType: 'arraybuffer',
+                timeout: 30000
+            });
+
+            const contentType2 = response2.headers['content-type'];
+            if (contentType2 && contentType2.includes('application/pdf')) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
+                return res.send(response2.data);
+            }
+        } catch (err2) {
+            console.error("latexonline.cc fallback compilation failed:", err2.message);
+        }
+
+        return res.status(422).json({ 
+            success: false, 
+            message: "LaTeX compilation error. Please check your LaTeX syntax or custom packages." 
+        });
     } catch (error) {
-        console.error("Error compiling resume via texlive.net proxy:", error.response ? error.response.status : error.message);
+        console.error("Error compiling resume:", error.message);
         res.status(500).json({ success: false, message: "Error compiling LaTeX on external service." });
     }
 };
