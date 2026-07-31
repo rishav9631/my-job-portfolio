@@ -94,55 +94,36 @@ exports.compileResume = async (req, res) => {
             return res.status(400).json({ success: false, message: "LaTeX content is required." });
         }
 
-        // ── ATTEMPT 1: texlive.net ──────────────────────────────────────────
-        try {
-            const params = new URLSearchParams();
-            params.append('filecontents[]', content);
-            params.append('filename[]', 'main.tex');
-            params.append('engine', 'pdflatex');
-            params.append('return', 'pdf');
+        console.log("[CompileResume] Compiling LaTeX via texlive.net (FormData)...");
+        
+        const form = new FormData();
+        form.append('filecontents[]', content);
+        form.append('filename[]', 'document.tex');
+        form.append('engine', 'pdflatex');
+        form.append('return', 'pdf');
 
-            const response = await axios.post('https://texlive.net/cgi-bin/latexcgi', params.toString(), {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                responseType: 'arraybuffer',
-                timeout: 30000
-            });
-
-            const contentType = response.headers['content-type'];
-            if (contentType && contentType.includes('application/pdf')) {
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
-                return res.send(response.data);
-            }
-        } catch (err1) {
-            console.warn("texlive.net compilation attempt failed, trying latexonline fallback...", err1.message);
-        }
-
-        // ── ATTEMPT 2: latexonline.cc fallback ──────────────────────────────
-        try {
-            const response2 = await axios.get(`https://latexonline.cc/compile?text=${encodeURIComponent(content)}`, {
-                responseType: 'arraybuffer',
-                timeout: 30000
-            });
-
-            const contentType2 = response2.headers['content-type'];
-            if (contentType2 && contentType2.includes('application/pdf')) {
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
-                return res.send(response2.data);
-            }
-        } catch (err2) {
-            console.error("latexonline.cc fallback compilation failed:", err2.message);
-        }
-
-        return res.status(422).json({ 
-            success: false, 
-            message: "LaTeX compilation error. Please check your LaTeX syntax or custom packages." 
+        const response = await axios.post('https://texlive.net/cgi-bin/latexcgi', form, {
+            responseType: 'arraybuffer',
+            timeout: 35000
         });
+
+        const contentType = response.headers['content-type'];
+        if (contentType && contentType.includes('application/pdf')) {
+            console.log(`[CompileResume] SUCCESS! Generated PDF (${response.data.length} bytes)`);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', 'inline; filename="resume.pdf"');
+            return res.send(response.data);
+        } else {
+            const text = Buffer.from(response.data).toString('utf-8');
+            console.error("[CompileResume] LaTeX compilation returned non-PDF:", text.substring(0, 500));
+            return res.status(422).json({
+                success: false,
+                message: "LaTeX compilation error. Please check your LaTeX syntax.",
+                details: text.substring(0, 1000)
+            });
+        }
     } catch (error) {
-        console.error("Error compiling resume:", error.message);
+        console.error("[CompileResume] Error compiling resume:", error.message);
         res.status(500).json({ success: false, message: "Error compiling LaTeX on external service." });
     }
 };
