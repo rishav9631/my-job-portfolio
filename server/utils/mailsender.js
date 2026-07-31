@@ -11,13 +11,19 @@ const axios = require('axios');
  */
 const mailSender = async (email, title, body, config = null) => {
     const resendApiKey = (config && config.resendApiKey) || process.env.RESEND_API_KEY;
-    const senderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+    const rawSenderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'rishavjha771@gmail.com';
     const senderName = (config && config.senderName) || process.env.SENDER_NAME || 'Rishav Kumar';
+
+    // Resend requires verified domain for 'from'. If sender email is @gmail.com or unverified default, use onboarding@resend.dev
+    const isGmailOrPublic = rawSenderEmail.includes('@gmail.com') || rawSenderEmail.includes('@yahoo.com') || rawSenderEmail.includes('@outlook.com') || rawSenderEmail.includes('@hotmail.com');
+    const fromAddress = isGmailOrPublic ? `${senderName} <onboarding@resend.dev>` : `${senderName} <${rawSenderEmail}>`;
+    const replyToAddress = rawSenderEmail;
 
     console.log(`[MailSender] ---- DEBUG START ----`);
     console.log(`[MailSender] Provider: Resend API (HTTPS)`);
     console.log(`[MailSender] API Key: ${resendApiKey ? `SET (${resendApiKey.length} chars, starts with "${resendApiKey.substring(0, 6)}")` : '<NOT SET>'}`);
-    console.log(`[MailSender] From: ${senderName} <${senderEmail}>`);
+    console.log(`[MailSender] From: ${fromAddress}`);
+    console.log(`[MailSender] Reply-To: ${replyToAddress}`);
     console.log(`[MailSender] To: ${email}`);
     console.log(`[MailSender] Subject: ${title}`);
     console.log(`[MailSender] Body length: ${body ? body.length : 0} chars`);
@@ -33,14 +39,17 @@ const mailSender = async (email, title, body, config = null) => {
         console.log(`[MailSender] Sending via Resend API...`);
         const sendStart = Date.now();
 
+        const payload = {
+            from: fromAddress,
+            to: [email],
+            subject: title,
+            html: body,
+            reply_to: replyToAddress,
+        };
+
         const response = await axios.post(
             'https://api.resend.com/emails',
-            {
-                from: `${senderName} <${senderEmail}>`,
-                to: [email],
-                subject: title,
-                html: body,
-            },
+            payload,
             {
                 headers: {
                     'Authorization': `Bearer ${resendApiKey}`,
