@@ -37,7 +37,21 @@ const appConfigSchema = new mongoose.Schema({
         default: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
     },
 
-    // Resend API configuration (replaces SMTP — works on Render free tier)
+    // Gmail API configuration (Primary - HTTPS port 443)
+    gmailClientId: {
+        type: String,
+        default: ''
+    },
+    gmailClientSecret: {
+        type: String,
+        default: ''
+    },
+    gmailRefreshToken: {
+        type: String,
+        default: ''
+    },
+
+    // Resend API configuration (Secondary fallback)
     resendApiKey: {
         type: String,
         default: ''

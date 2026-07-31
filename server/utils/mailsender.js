@@ -1,108 +1,171 @@
 const axios = require('axios');
 
 /**
- * Send email via Resend HTTP API (works on Render free tier — uses HTTPS port 443).
- * Falls back gracefully with detailed error logging.
+ * Creates a base64url-encoded RFC 2822 raw email string for Gmail API.
+ */
+function createRawEmail(to, fromName, fromEmail, subject, htmlBody) {
+    const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+    const messageParts = [
+        `From: ${fromName} <${fromEmail}>`,
+        `To: ${to}`,
+        `Subject: ${utf8Subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=utf-8`,
+        ``,
+        htmlBody
+    ];
+    const message = messageParts.join('\r\n');
+    return Buffer.from(message)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
+/**
+ * Fetches a fresh OAuth2 access token using client ID, client secret, and refresh token.
+ */
+async function getGmailAccessToken(clientId, clientSecret, refreshToken) {
+    console.log(`[MailSender] Requesting fresh Google OAuth2 access token...`);
+    const tokenRes = await axios.post(
+        'https://oauth2.googleapis.com/token',
+        {
+            client_id: clientId,
+            client_secret: clientSecret,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+        },
+        {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 15000
+        }
+    );
+    return tokenRes.data.access_token;
+}
+
+/**
+ * Send email via Gmail REST API (HTTPS port 443 — works on Render free tier).
+ * Falls back to Resend API if Gmail API is not configured or fails.
  *
  * @param {string} email - Recipient email address
  * @param {string} title - Email subject line
  * @param {string} body  - HTML email body
- * @param {object} config - Dynamic config from MongoDB (contains resendApiKey, senderEmail, senderName)
+ * @param {object} config - Dynamic config from MongoDB
  */
 const mailSender = async (email, title, body, config = null) => {
-    const resendApiKey = (config && config.resendApiKey) || process.env.RESEND_API_KEY;
-    const rawSenderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'rishavjha771@gmail.com';
+    // Resolve Gmail API credentials (from config, env, or defaults)
+    const gmailClientId = (config && config.gmailClientId) || process.env.GMAIL_CLIENT_ID || '';
+    const gmailClientSecret = (config && config.gmailClientSecret) || process.env.GMAIL_CLIENT_SECRET || '';
+    const gmailRefreshToken = (config && config.gmailRefreshToken) || process.env.GMAIL_REFRESH_TOKEN || '';
+
+    const senderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'rishavjha771@gmail.com';
     const senderName = (config && config.senderName) || process.env.SENDER_NAME || 'Rishav Kumar';
 
-    // Resend requires verified domain for 'from'. If sender email is @gmail.com or unverified default, use onboarding@resend.dev
-    const isGmailOrPublic = rawSenderEmail.includes('@gmail.com') || rawSenderEmail.includes('@yahoo.com') || rawSenderEmail.includes('@outlook.com') || rawSenderEmail.includes('@hotmail.com');
-    const fromAddress = isGmailOrPublic ? `${senderName} <onboarding@resend.dev>` : `${senderName} <${rawSenderEmail}>`;
-    const replyToAddress = rawSenderEmail;
-
     console.log(`[MailSender] ---- DEBUG START ----`);
-    console.log(`[MailSender] Provider: Resend API (HTTPS)`);
-    console.log(`[MailSender] API Key: ${resendApiKey ? `SET (${resendApiKey.length} chars, starts with "${resendApiKey.substring(0, 6)}")` : '<NOT SET>'}`);
-    console.log(`[MailSender] From: ${fromAddress}`);
-    console.log(`[MailSender] Reply-To: ${replyToAddress}`);
+    console.log(`[MailSender] Primary Provider: Gmail REST API (HTTPS)`);
+    console.log(`[MailSender] Gmail Client ID: ${gmailClientId ? `SET (${gmailClientId.substring(0, 10)}...)` : '<NOT SET>'}`);
+    console.log(`[MailSender] Gmail Refresh Token: ${gmailRefreshToken ? `SET (${gmailRefreshToken.substring(0, 10)}...)` : '<NOT SET>'}`);
+    console.log(`[MailSender] From: ${senderName} <${senderEmail}>`);
     console.log(`[MailSender] To: ${email}`);
     console.log(`[MailSender] Subject: ${title}`);
     console.log(`[MailSender] Body length: ${body ? body.length : 0} chars`);
 
-    if (!resendApiKey) {
-        const errMsg = 'Resend API key is not configured. Set RESEND_API_KEY env var or update it in Admin Dashboard.';
-        console.error(`[MailSender] ERROR: ${errMsg}`);
-        console.error(`[MailSender] ---- DEBUG END (no API key) ----`);
-        throw new Error(errMsg);
+    // ── ATTEMPT 1: Gmail REST API ─────────────────────────────────────────────
+    if (gmailClientId && gmailClientSecret && gmailRefreshToken) {
+        try {
+            console.log(`[MailSender] ATTEMPT 1: Sending via Gmail REST API...`);
+            const sendStart = Date.now();
+
+            // 1. Get access token
+            const accessToken = await getGmailAccessToken(gmailClientId, gmailClientSecret, gmailRefreshToken);
+            console.log(`[MailSender] ATTEMPT 1: OAuth2 Access Token acquired successfully.`);
+
+            // 2. Encode raw email
+            const rawEmail = createRawEmail(email, senderName, senderEmail, title, body);
+
+            // 3. Post to Gmail API
+            const response = await axios.post(
+                'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+                { raw: rawEmail },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 30000,
+                }
+            );
+
+            const elapsed = Date.now() - sendStart;
+            console.log(`[MailSender] ATTEMPT 1: Email sent via Gmail REST API in ${elapsed}ms — Message ID: ${response.data?.id}`);
+            console.log(`[MailSender] ---- DEBUG END (Gmail API success) ----`);
+
+            return {
+                messageId: response.data?.id || 'unknown',
+                response: JSON.stringify(response.data),
+            };
+        } catch (gmailError) {
+            console.error(`[MailSender] ATTEMPT 1 FAILED via Gmail REST API: ${gmailError.message}`);
+            if (gmailError.response) {
+                console.error(`[MailSender]   HTTP Status: ${gmailError.response.status}`);
+                console.error(`[MailSender]   Response body: ${JSON.stringify(gmailError.response.data)}`);
+            }
+            console.warn(`[MailSender] Retrying via Resend API fallback...`);
+        }
+    } else {
+        console.warn(`[MailSender] Gmail API credentials incomplete. Skipping Gmail API.`);
     }
 
-    try {
-        console.log(`[MailSender] Sending via Resend API...`);
-        const sendStart = Date.now();
+    // ── ATTEMPT 2: Resend API Fallback ────────────────────────────────────────
+    const resendApiKey = (config && config.resendApiKey) || process.env.RESEND_API_KEY;
+    if (resendApiKey) {
+        try {
+            console.log(`[MailSender] ATTEMPT 2: Sending via Resend API fallback...`);
+            const sendStart = Date.now();
 
-        const payload = {
-            from: fromAddress,
-            to: [email],
-            subject: title,
-            html: body,
-            reply_to: replyToAddress,
-        };
+            const isGmailOrPublic = senderEmail.includes('@gmail.com') || senderEmail.includes('@yahoo.com') || senderEmail.includes('@outlook.com');
+            const fromAddress = isGmailOrPublic ? `${senderName} <onboarding@resend.dev>` : `${senderName} <${senderEmail}>`;
 
-        const response = await axios.post(
-            'https://api.resend.com/emails',
-            payload,
-            {
-                headers: {
-                    'Authorization': `Bearer ${resendApiKey}`,
-                    'Content-Type': 'application/json',
+            const response = await axios.post(
+                'https://api.resend.com/emails',
+                {
+                    from: fromAddress,
+                    to: [email],
+                    subject: title,
+                    html: body,
+                    reply_to: senderEmail,
                 },
-                timeout: 30000, // 30s timeout
+                {
+                    headers: {
+                        'Authorization': `Bearer ${resendApiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 30000,
+                }
+            );
+
+            const elapsed = Date.now() - sendStart;
+            console.log(`[MailSender] ATTEMPT 2: Email sent via Resend API in ${elapsed}ms — ID: ${response.data?.id}`);
+            console.log(`[MailSender] ---- DEBUG END (Resend API success) ----`);
+
+            return {
+                messageId: response.data?.id || 'unknown',
+                response: JSON.stringify(response.data),
+            };
+        } catch (resendError) {
+            console.error(`[MailSender] ATTEMPT 2 FAILED via Resend API: ${resendError.message}`);
+            if (resendError.response) {
+                console.error(`[MailSender]   HTTP Status: ${resendError.response.status}`);
+                console.error(`[MailSender]   Response body: ${JSON.stringify(resendError.response.data)}`);
             }
-        );
-
-        const elapsed = Date.now() - sendStart;
-        console.log(`[MailSender] Email sent in ${elapsed}ms`);
-        console.log(`[MailSender] Resend response:`, JSON.stringify(response.data));
-        console.log(`[MailSender] ---- DEBUG END (success) ----`);
-
-        return {
-            messageId: response.data?.id || 'unknown',
-            response: JSON.stringify(response.data),
-        };
-    } catch (error) {
-        console.error(`[MailSender] FAILED to send email via Resend API`);
-
-        if (error.response) {
-            // Resend API returned an error response
-            console.error(`[MailSender]   HTTP Status: ${error.response.status}`);
-            console.error(`[MailSender]   Response body: ${JSON.stringify(error.response.data)}`);
-
-            const resendError = error.response.data;
-            const statusCode = error.response.status;
-
-            if (statusCode === 401) {
-                console.error(`[MailSender]   DIAGNOSIS: Invalid API key. Check your Resend API key.`);
-            } else if (statusCode === 403) {
-                console.error(`[MailSender]   DIAGNOSIS: Forbidden. Your sending domain may not be verified in Resend.`);
-            } else if (statusCode === 422) {
-                console.error(`[MailSender]   DIAGNOSIS: Validation error. Check from/to email addresses and domain verification.`);
-            } else if (statusCode === 429) {
-                console.error(`[MailSender]   DIAGNOSIS: Rate limited. You've exceeded your Resend plan's sending limit.`);
-            }
-
-            const errMsg = resendError?.message || resendError?.error || `Resend API error (HTTP ${statusCode})`;
-            console.error(`[MailSender] ---- DEBUG END (API error) ----`);
-            throw new Error(errMsg);
-        } else if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-            console.error(`[MailSender]   DIAGNOSIS: Request timed out. Network issue or Resend API is down.`);
-            console.error(`[MailSender] ---- DEBUG END (timeout) ----`);
-            throw new Error('Email send request timed out');
-        } else {
-            console.error(`[MailSender]   Error: ${error.message}`);
-            console.error(`[MailSender]   Code: ${error.code || 'N/A'}`);
-            console.error(`[MailSender] ---- DEBUG END (network error) ----`);
-            throw error;
+            throw new Error(`Email failed: Gmail API error and Resend fallback error (${resendError.message})`);
         }
     }
+
+    const finalErrMsg = 'All email sending providers failed or were missing credentials.';
+    console.error(`[MailSender] ERROR: ${finalErrMsg}`);
+    console.error(`[MailSender] ---- DEBUG END (all failed) ----`);
+    throw new Error(finalErrMsg);
 };
 
 module.exports = mailSender;

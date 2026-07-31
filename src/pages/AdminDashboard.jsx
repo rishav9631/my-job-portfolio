@@ -166,6 +166,9 @@ const AdminDashboard = () => {
       senderEmail: 'rishavjha771@gmail.com',
       geminiApiKey: config?.geminiApiKey || '',
       geminiApiUrl: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      gmailClientId: config?.gmailClientId || '',
+      gmailClientSecret: config?.gmailClientSecret || '',
+      gmailRefreshToken: config?.gmailRefreshToken || '',
       resendApiKey: config?.resendApiKey || '',
     };
     setConfig(defaults);
@@ -233,7 +236,7 @@ const AdminDashboard = () => {
           <StatPill icon="fa-solid fa-link" label="Profile Links" value="3" bgClass="bg-indigo-500/15" textClass="text-indigo-400" />
           <StatPill icon="fa-solid fa-envelope" label="Email Fields" value="3" bgClass="bg-emerald-500/15" textClass="text-emerald-400" />
           <StatPill icon="fa-solid fa-robot" label="AI Config" value="2" bgClass="bg-amber-500/15" textClass="text-amber-400" />
-          <StatPill icon="fa-solid fa-server" label="Email API" value="1" bgClass="bg-rose-500/15" textClass="text-rose-400" />
+          <StatPill icon="fa-brands fa-google" label="Gmail API" value="3" bgClass="bg-rose-500/15" textClass="text-rose-400" />
         </div>
 
         {/* ─── Settings Sections ─── */}
@@ -292,12 +295,51 @@ const AdminDashboard = () => {
             </div>
           </section>
 
-          {/* ══════ Section 4: Resend Email Configuration ══════ */}
+          {/* ══════ Section 4: Gmail REST API Configuration (Primary) ══════ */}
+          <section className="bg-[rgba(20,27,45,0.75)] border border-white/[0.07] rounded-2xl p-7 backdrop-blur-[10px] shadow-[0_4px_30px_rgba(0,0,0,0.15)]">
+            <SectionHeader
+              icon="fa-brands fa-google"
+              title="Gmail REST API Configuration"
+              subtitle="Primary email provider (HTTPS port 443 — sends directly from your @gmail.com address)"
+              accentColor="emerald"
+            />
+            <div className="grid grid-cols-1 gap-5">
+              <ConfigField
+                label="Gmail OAuth Client ID"
+                fieldKey="gmailClientId"
+                value={config?.gmailClientId || ''}
+                onChange={handleChange}
+                placeholder="1059520152914-xxxx.apps.googleusercontent.com"
+              />
+              <ConfigField
+                label="Gmail OAuth Client Secret"
+                fieldKey="gmailClientSecret"
+                value={config?.gmailClientSecret || ''}
+                onChange={handleChange}
+                placeholder="GOCSPX-xxxx..."
+                isSensitive={true}
+                isRevealed={revealedFields.gmailClientSecret}
+                onToggleReveal={() => toggleReveal('gmailClientSecret')}
+              />
+              <ConfigField
+                label="Gmail OAuth Refresh Token"
+                fieldKey="gmailRefreshToken"
+                value={config?.gmailRefreshToken || ''}
+                onChange={handleChange}
+                placeholder="1//04_xxxx..."
+                isSensitive={true}
+                isRevealed={revealedFields.gmailRefreshToken}
+                onToggleReveal={() => toggleReveal('gmailRefreshToken')}
+              />
+            </div>
+          </section>
+
+          {/* ══════ Section 5: Resend Email Configuration (Fallback) ══════ */}
           <section className="bg-[rgba(20,27,45,0.75)] border border-white/[0.07] rounded-2xl p-7 backdrop-blur-[10px] shadow-[0_4px_30px_rgba(0,0,0,0.15)]">
             <SectionHeader
               icon="fa-solid fa-paper-plane"
-              title="Resend Email Configuration"
-              subtitle="API key for sending emails via Resend (HTTPS — works on Render free tier)"
+              title="Resend Email Configuration (Fallback)"
+              subtitle="Secondary provider if Gmail API is unavailable"
               accentColor="indigo"
             />
             <div className="grid grid-cols-1 gap-5">
@@ -311,18 +353,6 @@ const AdminDashboard = () => {
                 isRevealed={revealedFields.resendApiKey}
                 onToggleReveal={() => toggleReveal('resendApiKey')}
               />
-              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-4 text-sm text-slate-300 leading-relaxed">
-                <p className="font-semibold text-indigo-300 mb-2">
-                  <i className="fa-solid fa-circle-info mr-2" />
-                  How to get your Resend API key:
-                </p>
-                <ol className="list-decimal list-inside space-y-1 text-slate-400">
-                  <li>Sign up at <a href="https://resend.com" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">resend.com</a></li>
-                  <li>Add & verify your sending domain (or use <code className="bg-white/5 px-1 rounded text-indigo-300">onboarding@resend.dev</code> for testing)</li>
-                  <li>Go to API Keys → Create API Key</li>
-                  <li>Paste the key above and save</li>
-                </ol>
-              </div>
             </div>
           </section>
 

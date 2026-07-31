@@ -463,7 +463,7 @@ const MassMailer = () => {
 
         {/* Footer */}
         <div className="pt-5 border-t border-white/[0.07] text-[0.85rem] text-slate-400">
-          <p>Connected: <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] mr-1 align-middle" /> Resend API</p>
+          <p>Connected: <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] mr-1 align-middle" /> Gmail API Ready</p>
         </div>
       </aside>
 
@@ -503,7 +503,7 @@ const MassMailer = () => {
                 <div className="bg-gradient-to-br from-indigo-500/10 to-[rgba(13,18,30,0.3)] border border-indigo-500/20 rounded-xl p-6 flex flex-col gap-3.5">
                   <h3 className="text-[1.3rem] text-white font-semibold">Welcome to MassMailer</h3>
                   <p className="text-slate-400 leading-relaxed text-[0.95rem]">
-                    Easily launch bulk email campaigns using the Resend API. You can upload a list of target companies via a CSV file, or send direct inquiries individually.
+                    Easily launch bulk email campaigns using Gmail REST API (OAuth2). You can upload a list of target companies via a CSV file, or send direct inquiries individually.
                   </p>
                   <div className="flex gap-3 mt-2">
                     <button onClick={() => switchTab('bulk')} className="inline-flex items-center gap-2 px-[18px] py-[10px] rounded-lg text-[0.9rem] font-semibold bg-indigo-500 text-white shadow-[0_4px_12px_rgba(99,102,241,0.2)] hover:bg-indigo-600 hover:-translate-y-px transition-all">
@@ -521,7 +521,7 @@ const MassMailer = () => {
                   <div className="grid grid-cols-1 gap-3 bg-white/[0.02] rounded-lg p-4 border border-white/[0.04]">
                     <div className="flex justify-between text-[0.9rem]">
                       <span className="text-slate-400">SMTP Host:</span>
-                      <span className="font-medium font-mono text-slate-50">Resend API (HTTPS)</span>
+                      <span className="font-medium font-mono text-slate-50">Gmail REST API (HTTPS / OAuth2)</span>
                     </div>
                     <div className="flex justify-between text-[0.9rem]">
                       <span className="text-slate-400">Sender Address:</span>

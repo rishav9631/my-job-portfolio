@@ -22,6 +22,9 @@ const getConfigInternal = async () => {
         config = await AppConfig.create({
             geminiApiKey: process.env.GEMINI_API_KEY || '',
             geminiApiUrl: process.env.GEMINI_URL || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+            gmailClientId: process.env.GMAIL_CLIENT_ID || '',
+            gmailClientSecret: process.env.GMAIL_CLIENT_SECRET || '',
+            gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN || '',
             resendApiKey: process.env.RESEND_API_KEY || '',
             smtpHost: process.env.MAIL_HOST || 'smtp.gmail.com',
             smtpPort: process.env.MAIL_PORT ? parseInt(process.env.MAIL_PORT, 10) : 465,
@@ -65,6 +68,8 @@ const getConfig = async (req, res) => {
             _id: undefined,
             __v: undefined,
             geminiApiKey: maskSecret(config.geminiApiKey),
+            gmailClientSecret: maskSecret(config.gmailClientSecret),
+            gmailRefreshToken: maskSecret(config.gmailRefreshToken),
             resendApiKey: maskSecret(config.resendApiKey),
             smtpPass: maskSecret(config.smtpPass),
         };
@@ -107,6 +112,12 @@ const updateConfig = async (req, res) => {
         // Skip masked values — don't overwrite secrets with mask placeholders
         if (updates.geminiApiKey && updates.geminiApiKey.includes('••••')) {
             delete updates.geminiApiKey;
+        }
+        if (updates.gmailClientSecret && updates.gmailClientSecret.includes('••••')) {
+            delete updates.gmailClientSecret;
+        }
+        if (updates.gmailRefreshToken && updates.gmailRefreshToken.includes('••••')) {
+            delete updates.gmailRefreshToken;
         }
         if (updates.resendApiKey && updates.resendApiKey.includes('••••')) {
             delete updates.resendApiKey;
