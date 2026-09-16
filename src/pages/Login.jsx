@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import axios from 'axios';
+
+const BASE_URL = process.env.REACT_APP_BASE_URL || 'https://jobtracker-backend-9dlp.onrender.com';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isForgetting, setIsForgetting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -34,6 +38,25 @@ const Login = () => {
       toast.error(msg, { id: toastId });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setIsForgetting(true);
+    const toastId = toast.loading('Sending recovery email...');
+
+    try {
+      const res = await axios.post(`${BASE_URL}/api/v1/auth/forgot-password`);
+      if (res.data.success) {
+        toast.success(res.data.message || 'Recovery email sent! Check your inbox.', { id: toastId });
+      } else {
+        toast.error(res.data.message || 'Something went wrong.', { id: toastId });
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Failed to send recovery email.';
+      toast.error(msg, { id: toastId });
+    } finally {
+      setIsForgetting(false);
     }
   };
 
@@ -125,6 +148,27 @@ const Login = () => {
                   )}
                 </button>
               </div>
+              {/* Forgot Password */}
+              <div className="flex justify-end mt-2">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={isForgetting}
+                  className="text-sm text-[#10b981] hover:text-[#34d399] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isForgetting ? (
+                    <span className="flex items-center gap-1.5">
+                      <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Sending...
+                    </span>
+                  ) : (
+                    'Forgot Password?'
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -158,6 +202,7 @@ const Login = () => {
             </p>
           </div>
         </div>
+
 
         {/* Footer */}
         <p className="text-center text-gray-600 text-xs mt-6">
