@@ -36,6 +36,7 @@ const aiRoutes = require('./routes/aiRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const authRoutes = require('./routes/authRoutes');
 const configRoutes = require('./routes/configRoutes');
+const oauthRoutes = require('./routes/oauthRoutes');
 
 // Health check endpoint for frontend status indicator
 app.get('/api/v1/health', (req, res) => {
@@ -47,6 +48,7 @@ app.use('/api/v1/ai', aiRoutes);
 app.use('/api/v1/resume', resumeRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/config', configRoutes);
+app.use('/api/v1/oauth', oauthRoutes);
 
 // API Endpoint to handle sending email
 app.post('/send-email', async (req, res) => {
@@ -117,7 +119,21 @@ module.exports = app;
 
 // Start the server (if run directly)
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`Server is running on http://localhost:${PORT}`);
+
+    // Auto-migrate OAuth credentials from AppConfig to GoogleOAuthToken on first startup
+    try {
+      const { migrateFromAppConfig, getTokenStatus } = require('./utils/googleOAuthService');
+      const status = await getTokenStatus();
+      if (!status.initialized) {
+        console.log('[Startup] No OAuth tokens found in MongoDB. Attempting migration from AppConfig...');
+        await migrateFromAppConfig();
+      } else {
+        console.log(`[Startup] OAuth tokens already initialized (expires in ${status.expiresInSeconds}s, refresh count: ${status.refreshCount})`);
+      }
+    } catch (err) {
+      console.error('[Startup] OAuth migration check failed:', err.message);
+    }
   });
 }

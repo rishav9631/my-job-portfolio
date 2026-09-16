@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { getValidAccessToken } = require('./googleOAuthService');
 
 /**
  * Creates a base64url-encoded RFC 2822 raw email string for Gmail API.
@@ -23,27 +24,6 @@ function createRawEmail(to, fromName, fromEmail, subject, htmlBody) {
 }
 
 /**
- * Fetches a fresh OAuth2 access token using client ID, client secret, and refresh token.
- */
-async function getGmailAccessToken(clientId, clientSecret, refreshToken) {
-    console.log(`[MailSender] Requesting fresh Google OAuth2 access token...`);
-    const tokenRes = await axios.post(
-        'https://oauth2.googleapis.com/token',
-        {
-            client_id: clientId,
-            client_secret: clientSecret,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token',
-        },
-        {
-            headers: { 'Content-Type': 'application/json' },
-            timeout: 15000
-        }
-    );
-    return tokenRes.data.access_token;
-}
-
-/**
  * Send email via Gmail REST API (HTTPS port 443 — works on Render free tier).
  * Falls back to Resend API if Gmail API is not configured or fails.
  *
@@ -53,67 +33,57 @@ async function getGmailAccessToken(clientId, clientSecret, refreshToken) {
  * @param {object} config - Dynamic config from MongoDB
  */
 const mailSender = async (email, title, body, config = null) => {
-    // Resolve Gmail API credentials (from config, env, or defaults)
-    const gmailClientId = (config && config.gmailClientId) || process.env.GMAIL_CLIENT_ID || '';
-    const gmailClientSecret = (config && config.gmailClientSecret) || process.env.GMAIL_CLIENT_SECRET || '';
-    const gmailRefreshToken = (config && config.gmailRefreshToken) || process.env.GMAIL_REFRESH_TOKEN || '';
-
+    // Sender identity (still resolved from config/env for email composition)
     const senderEmail = (config && config.senderEmail) || process.env.SENDER_EMAIL || 'rishavjha771@gmail.com';
     const senderName = (config && config.senderName) || process.env.SENDER_NAME || 'Rishav Kumar';
 
     console.log(`[MailSender] ---- DEBUG START ----`);
-    console.log(`[MailSender] Primary Provider: Gmail REST API (HTTPS)`);
-    console.log(`[MailSender] Gmail Client ID: ${gmailClientId ? `SET (${gmailClientId.substring(0, 10)}...)` : '<NOT SET>'}`);
-    console.log(`[MailSender] Gmail Refresh Token: ${gmailRefreshToken ? `SET (${gmailRefreshToken.substring(0, 10)}...)` : '<NOT SET>'}`);
+    console.log(`[MailSender] Primary Provider: Gmail REST API (via MongoDB-cached OAuth)`);
     console.log(`[MailSender] From: ${senderName} <${senderEmail}>`);
     console.log(`[MailSender] To: ${email}`);
     console.log(`[MailSender] Subject: ${title}`);
     console.log(`[MailSender] Body length: ${body ? body.length : 0} chars`);
 
-    // ── ATTEMPT 1: Gmail REST API ─────────────────────────────────────────────
-    if (gmailClientId && gmailClientSecret && gmailRefreshToken) {
-        try {
-            console.log(`[MailSender] ATTEMPT 1: Sending via Gmail REST API...`);
-            const sendStart = Date.now();
+    // ── ATTEMPT 1: Gmail REST API (with MongoDB-cached OAuth tokens) ──────────
+    try {
+        console.log(`[MailSender] ATTEMPT 1: Sending via Gmail REST API...`);
+        const sendStart = Date.now();
 
-            // 1. Get access token
-            const accessToken = await getGmailAccessToken(gmailClientId, gmailClientSecret, gmailRefreshToken);
-            console.log(`[MailSender] ATTEMPT 1: OAuth2 Access Token acquired successfully.`);
+        // 1. Get access token (auto-refreshes from MongoDB cache)
+        const accessToken = await getValidAccessToken();
+        console.log(`[MailSender] ATTEMPT 1: OAuth2 Access Token acquired via googleOAuthService.`);
 
-            // 2. Encode raw email
-            const rawEmail = createRawEmail(email, senderName, senderEmail, title, body);
+        // 2. Encode raw email
+        const rawEmail = createRawEmail(email, senderName, senderEmail, title, body);
 
-            // 3. Post to Gmail API
-            const response = await axios.post(
-                'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
-                { raw: rawEmail },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                    timeout: 30000,
-                }
-            );
-
-            const elapsed = Date.now() - sendStart;
-            console.log(`[MailSender] ATTEMPT 1: Email sent via Gmail REST API in ${elapsed}ms — Message ID: ${response.data?.id}`);
-            console.log(`[MailSender] ---- DEBUG END (Gmail API success) ----`);
-
-            return {
-                messageId: response.data?.id || 'unknown',
-                response: JSON.stringify(response.data),
-            };
-        } catch (gmailError) {
-            console.error(`[MailSender] ATTEMPT 1 FAILED via Gmail REST API: ${gmailError.message}`);
-            if (gmailError.response) {
-                console.error(`[MailSender]   HTTP Status: ${gmailError.response.status}`);
-                console.error(`[MailSender]   Response body: ${JSON.stringify(gmailError.response.data)}`);
+        // 3. Post to Gmail API
+        const response = await axios.post(
+            'https://gmail.googleapis.com/gmail/v1/users/me/messages/send',
+            { raw: rawEmail },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30000,
             }
-            console.warn(`[MailSender] Retrying via Resend API fallback...`);
+        );
+
+        const elapsed = Date.now() - sendStart;
+        console.log(`[MailSender] ATTEMPT 1: Email sent via Gmail REST API in ${elapsed}ms — Message ID: ${response.data?.id}`);
+        console.log(`[MailSender] ---- DEBUG END (Gmail API success) ----`);
+
+        return {
+            messageId: response.data?.id || 'unknown',
+            response: JSON.stringify(response.data),
+        };
+    } catch (gmailError) {
+        console.error(`[MailSender] ATTEMPT 1 FAILED via Gmail REST API: ${gmailError.message}`);
+        if (gmailError.response) {
+            console.error(`[MailSender]   HTTP Status: ${gmailError.response.status}`);
+            console.error(`[MailSender]   Response body: ${JSON.stringify(gmailError.response.data)}`);
         }
-    } else {
-        console.warn(`[MailSender] Gmail API credentials incomplete. Skipping Gmail API.`);
+        console.warn(`[MailSender] Retrying via Resend API fallback...`);
     }
 
     // ── ATTEMPT 2: Resend API Fallback ────────────────────────────────────────
