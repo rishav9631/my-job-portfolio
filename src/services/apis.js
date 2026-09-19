@@ -23,3 +23,9 @@ export const resumeEndpoint = {
   TAILORED_RESUME: BASE_URL + "/api/v1/resume/tailored",
   COMPILE_RESUME: BASE_URL + "/api/v1/resume/compile",
 };
+
+// OAUTH API (Admin Dashboard — Token Status)
+export const oauthEndpoint = {
+  OAUTH_STATUS: BASE_URL + "/api/v1/oauth/status",
+  OAUTH_REFRESH: BASE_URL + "/api/v1/oauth/refresh",
+};
