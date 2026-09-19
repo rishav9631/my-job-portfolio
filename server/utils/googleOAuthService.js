@@ -70,16 +70,29 @@ async function getValidAccessToken() {
 
 /**
  * Forces an immediate token refresh, regardless of current token validity.
+ * Returns the full token status object (same shape as getTokenStatus()) so
+ * callers can relay it to the client without a second DB round-trip.
  *
- * @returns {Promise<{accessToken: string, expiresAt: Date}>}
+ * @returns {Promise<object>} Full token status — no raw tokens exposed
  */
 async function forceRefresh() {
-    const tokenDoc = await GoogleOAuthToken.findOne();
+    let tokenDoc = await GoogleOAuthToken.findOne();
+
     if (!tokenDoc) {
-        throw new Error('No Google OAuth credentials stored. Cannot refresh.');
+        // Graceful fallback: auto-migrate from AppConfig before failing
+        console.log('[GoogleOAuth] forceRefresh: no token doc found. Attempting migration from AppConfig...');
+        tokenDoc = await migrateFromAppConfig();
+        if (!tokenDoc) {
+            throw new Error('No Google OAuth credentials stored. Cannot refresh.');
+        }
+        // migrateFromAppConfig already performs an initial refresh — return status now
+        return await getTokenStatus();
     }
-    const accessToken = await refreshAndStore(tokenDoc);
-    return { accessToken, expiresAt: cachedExpiresAt };
+
+    await refreshAndStore(tokenDoc);
+
+    // Return the full safe status (reads back the freshly-written MongoDB document)
+    return await getTokenStatus();
 }
 
 /**

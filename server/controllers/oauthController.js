@@ -55,18 +55,18 @@ exports.initializeOAuth = async (req, res) => {
 /**
  * POST /api/v1/oauth/refresh
  * Forces an immediate token refresh, regardless of current token validity.
+ * Returns the full OAuth status object so the client can update its UI
+ * without firing a second GET /status request.
  */
 exports.forceRefreshOAuth = async (req, res) => {
     try {
         console.log('[OAuthController] Forcing token refresh...');
-        const result = await forceRefresh();
+        const status = await forceRefresh(); // returns full safe status
 
         res.json({
             success: true,
             message: 'Token refreshed successfully.',
-            oauth: {
-                expiresAt: result.expiresAt,
-            }
+            oauth: status, // full status — expiresAt, expiresInSeconds, refreshCount, lastRefreshedAt, scope, clientIdPrefix
         });
     } catch (error) {
         console.error('[OAuthController] Force refresh failed:', error.message);

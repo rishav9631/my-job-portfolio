@@ -109,7 +109,9 @@ const OAuthTokenStatus = () => {
       });
       if (res.data?.success) {
         toast.success('OAuth token refreshed successfully!');
-        await fetchOAuthStatus();
+        // Backend now returns the full status object — update widget state directly,
+        // no second GET /status roundtrip needed.
+        setOauthStatus(res.data.oauth);
       } else {
         toast.error(res.data?.message || 'Token refresh failed.');
       }
